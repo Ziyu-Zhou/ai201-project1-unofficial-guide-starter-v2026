@@ -108,30 +108,176 @@ without reading what came before or after?
 
 ## Sample Answer
 
-<!-- One complete question and answer, pasted as text, with the source line
-     visible. Milestone 4. -->
-
-**Question:**
+**Question:** How much does one wash and one dry cost in Aldridge Hall, and what payment method is accepted?
 
 **Answer:**
 
+```text
+One wash costs $1.75 and one dry costs $1.50, and only cards are accepted.
+
+Sources: `housing_aldridge_hall_laundry.txt` and `housing_aldridge_hall.txt`
+
+Sources retrieved: housing_aldridge_hall.txt, housing_aldridge_hall_laundry.txt, housing_calder_annexe_laundry.txt, housing_innisfree_hall_laundry.txt, housing_old_brewhouse_laundry.txt
 ```
-```
 
-**My relevance cutoff:**
+This is the actual model response from the Milestone 4 run on September 22,
+2026, using `--top-k 5 --threshold 0.64 --show-prompt`. Both cited Aldridge
+files support the prices and card-only payment rule. The other retrieved
+files describe different residences and were not used as sources in the answer.
 
-<!-- The number you set in config.py, and how you got there.
+**My relevance cutoff:** **0.64**, set in `config.py`.
 
-     You ran five questions your corpus covers and the five in OUT_OF_SCOPE
-     that it clearly doesn't, and wrote down the best distance for each. What
-     did those two groups look like? Where was the gap? Put the actual numbers
-     here — the table below wants all ten rows.
+With `campus_life`, `all-MiniLM-L6-v2`, cosine distance, and top-k = 5, the five
+in-corpus best distances ranged from **0.141968 to 0.458602**. The five
+out-of-scope best distances ranged from **0.824593 to 0.934011**. The gap is
+between **0.458602 and 0.824593**; its midpoint is approximately **0.641597**,
+so I chose **0.64**. This balances the margins to the two observed groups
+instead of placing the cutoff close to either group's boundary.
 
-     Milestone 4. -->
+The gate accepts only when the best distance is strictly below the cutoff.
+Applying the actual gate function to these retrieved results accepted **5/5**
+in-corpus questions and refused **5/5** out-of-scope questions. These are tuning
+results on ten questions, not a guarantee for unseen questions.
 
 | Question | In corpus? | Best distance |
 |---|---|---|
-|  |  |  |
+| What is the deadline for adding a course, and when does dropping a course result in a W on your transcript? | Yes | 0.141968 |
+| How much does one wash and one dry cost in Aldridge Hall, and what payment method is accepted? | Yes | 0.262994 |
+| How often does the campus shuttle run on weekdays compared with weekends? | Yes | 0.458602 |
+| How far in advance can students book group study rooms, and how many two-hour blocks can each person reserve per week? | Yes | 0.211249 |
+| In CS 210, how many midterms and final exams are there, and which exams are curved? | Yes | 0.217425 |
+| What is the capital of Mongolia? | No | 0.824593 |
+| How do I change the oil in a diesel engine? | No | 0.934011 |
+| Who won the 1994 World Cup? | No | 0.885860 |
+| What is the recommended dosage of ibuprofen for a headache? | No | 0.844232 |
+| How do I write a for loop in Rust? | No | 0.895998 |
+
+**Retrieval review and top-k:** I printed and read all five returned chunks
+for the first three test questions. The add/drop source directly answers the
+first question; the withdrawal note is related but describes a different
+process, while the remaining results are less relevant. For Aldridge laundry,
+the first and fifth results support the answer; the middle three share laundry
+wording but describe other residences. For shuttle frequency, only the first
+result answers the question; the workload and dining results share timing
+language but do not establish shuttle frequency.
+
+I kept **TOP_K = 5** because the correct source ranks first for all five test
+questions and the fifth Aldridge result provides corroborating information
+that top-k = 4 would remove. This retains some irrelevant context, so grounding
+still matters: passing the gate does not mean every returned chunk is relevant.
+I have not established that five is optimal for unseen questions.
+
+**Grounding review:** I inspected `GROUNDING_INSTRUCTION` and the assembled
+prompt using `--show-prompt`. The instruction requires using only the supplied
+documents, admitting missing information, and naming the source filename.
+The generated sample used the correct Aldridge facts despite other halls in
+the context, so I kept the instruction unchanged for now. One successful
+sample does not establish that every generated answer will be grounded.
+
+<details>
+<summary>All retrieved sources and distances, ordered by rank</summary>
+
+**What is the deadline for adding a course, and when does dropping a course result in a W on your transcript?**
+
+| Rank | Source | Distance |
+|---|---|---|
+| 1 | `admin_add_drop_deadline.txt` | 0.141968 |
+| 2 | `admin_withdrawal_deadline.txt` | 0.439761 |
+| 3 | `admin_pass_fail_option.txt` | 0.475467 |
+| 4 | `admin_grade_appeals.txt` | 0.515115 |
+| 5 | `admin_transcript_requests.txt` | 0.520325 |
+
+**How much does one wash and one dry cost in Aldridge Hall, and what payment method is accepted?**
+
+| Rank | Source | Distance |
+|---|---|---|
+| 1 | `housing_aldridge_hall_laundry.txt` | 0.262994 |
+| 2 | `housing_innisfree_hall_laundry.txt` | 0.436394 |
+| 3 | `housing_calder_annexe_laundry.txt` | 0.441160 |
+| 4 | `housing_old_brewhouse_laundry.txt` | 0.469109 |
+| 5 | `housing_aldridge_hall.txt` | 0.472427 |
+
+**How often does the campus shuttle run on weekdays compared with weekends?**
+
+| Rank | Source | Distance |
+|---|---|---|
+| 1 | `transit_shuttle.txt` | 0.458602 |
+| 2 | `course_stat_150_workload.txt` | 0.559362 |
+| 3 | `course_cs_210_workload.txt` | 0.608923 |
+| 4 | `dining_verrill_street_grill.txt` | 0.609416 |
+| 5 | `course_econ_101_workload.txt` | 0.609953 |
+
+**How far in advance can students book group study rooms, and how many two-hour blocks can each person reserve per week?**
+
+| Rank | Source | Distance |
+|---|---|---|
+| 1 | `study_group_rooms.txt` | 0.211249 |
+| 2 | `course_cs_340.txt` | 0.494900 |
+| 3 | `money_textbooks.txt` | 0.535110 |
+| 4 | `course_cs_210.txt` | 0.542952 |
+| 5 | `money_jobs.txt` | 0.544200 |
+
+**In CS 210, how many midterms and final exams are there, and which exams are curved?**
+
+| Rank | Source | Distance |
+|---|---|---|
+| 1 | `course_cs_210_exams.txt` | 0.217425 |
+| 2 | `course_cs_210.txt` | 0.375881 |
+| 3 | `course_cs_340_exams.txt` | 0.393346 |
+| 4 | `course_engl_205_exams.txt` | 0.476696 |
+| 5 | `course_math_220_exams.txt` | 0.484556 |
+
+**What is the capital of Mongolia?**
+
+| Rank | Source | Distance |
+|---|---|---|
+| 1 | `course_hist_118_exams.txt` | 0.824593 |
+| 2 | `course_hist_118.txt` | 0.869272 |
+| 3 | `housing_morrow_house.txt` | 0.890410 |
+| 4 | `housing_morrow_house_laundry.txt` | 0.910530 |
+| 5 | `course_hist_118_workload.txt` | 0.919347 |
+
+**How do I change the oil in a diesel engine?**
+
+| Rank | Source | Distance |
+|---|---|---|
+| 1 | `admin_meal_plan_changes.txt` | 0.934011 |
+| 2 | `course_econ_101_exams.txt` | 0.947412 |
+| 3 | `housing_old_brewhouse_laundry.txt` | 0.954460 |
+| 4 | `course_engl_205_exams.txt` | 0.964458 |
+| 5 | `course_stat_150_exams.txt` | 0.967680 |
+
+**Who won the 1994 World Cup?**
+
+| Rank | Source | Distance |
+|---|---|---|
+| 1 | `course_hist_118_exams.txt` | 0.885860 |
+| 2 | `course_hist_118.txt` | 0.937370 |
+| 3 | `admin_study_abroad.txt` | 0.947474 |
+| 4 | `housing_innisfree_hall.txt` | 0.952119 |
+| 5 | `course_engl_205_exams.txt` | 0.955027 |
+
+**What is the recommended dosage of ibuprofen for a headache?**
+
+| Rank | Source | Distance |
+|---|---|---|
+| 1 | `money_textbooks.txt` | 0.844232 |
+| 2 | `course_hist_118.txt` | 0.860232 |
+| 3 | `course_econ_101.txt` | 0.864023 |
+| 4 | `course_cs_340_exams.txt` | 0.865958 |
+| 5 | `course_engl_205.txt` | 0.870331 |
+
+**How do I write a for loop in Rust?**
+
+| Rank | Source | Distance |
+|---|---|---|
+| 1 | `course_hist_118_exams.txt` | 0.895998 |
+| 2 | `course_engl_205.txt` | 0.900157 |
+| 3 | `course_engl_205_exams.txt` | 0.905611 |
+| 4 | `course_hist_118.txt` | 0.914244 |
+| 5 | `housing_calder_annexe_laundry.txt` | 0.917800 |
+
+</details>
 
 ## How I Used AI
 

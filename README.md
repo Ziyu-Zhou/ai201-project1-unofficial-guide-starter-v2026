@@ -27,6 +27,7 @@ Corpus: Campus_life
      this repo.
 
      Milestone 5. -->
+     I choose the campus_life corpus, my system answer question that student may encouter from their day to day in college, it will give the most relevant answer and refuse to answer if nothing seems relevant enough.
 
 ## Chunking Strategy
 
@@ -291,8 +292,10 @@ sample does not establish that every generated answer will be grounded.
      Milestone 5. -->
 
 **1.**
-
+I asked AI how the current chunking logic worked with campus_life and whether it needed changing. It found that all 88 documents already fit into individual chunks and recommended preserving each note whole. I chose a planned size of 600 characters with zero overlap, but left the existing code unchanged since the logic is coherent here.
 **2.**
+
+I asked AI how to measure retrieval distances for Milestone 4. It initially suggested a long Python script, so I asked for simpler commands that ran each question individually and inspected the results, then I give the results back to the AI and ask if these make sense to test if we got what we needed.
 
 <!-- ── Stretch features ─────────────────────────────────────────────────────
      Doing one? Say so here BEFORE you start. A feature this README never

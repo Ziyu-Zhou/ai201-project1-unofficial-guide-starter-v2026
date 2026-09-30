@@ -531,32 +531,147 @@ here because this evaluation found no wrong answer under the stated checks.
 
 **What I changed:**
 
+Reduced `config.py::TOP_K` from 5 to 1. This is the only pipeline change;
+the index, chunking, embedding model, generation model, grounding prompt,
+questions, relevance cutoff, and acceptance targets stay the same.
+
 **Why I picked it:**
+
+The diagnosis found other halls and courses in the retrieved context, so
+returning only the first chunk should remove those distracting sources while
+preserving the complete answer that ranked first for each test question.
+This addresses an observed weakness in context selection; no baseline
+criterion failed.
+
+**Why it might not work (solo review, before testing):** The first result
+could be wrong for a paraphrased question, and a question needing facts from
+multiple documents could become unanswerable with only one chunk. It also
+removes the corroborating Aldridge source retained in unit 1. All baseline
+criteria already scored 5/5, so this experiment cannot increase those counts;
+it can show whether less context preserves them. The gate uses the best
+distance, so reducing top-k is not expected to improve its decisions.
 
 <!-- Connect it to a specific diagnosis above in one sentence. If you can't,
      you picked a fix because it sounded impressive. -->
 
 ### Run Log — After
 
-<!-- Same format, same five criteria, three runs each.
-     `python run_eval.py --label after` -->
+Command: `.venv/bin/python -u run_eval.py --label after`.
+[Full after output](results/run_2026-09-29_2232_after.md) records three uncached
+runs of each question and the deterministic gate check. The completed command
+reported **15 model calls**, **3,339 input tokens**, and **597 output tokens**.
+[After retrieval and chunk evidence](results/evidence_2026-09-29_after.md)
+contains three retrieval passes plus the separate source-chunk inspection.
+Answers were manually reviewed against the same criteria as before.
 
 | Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
 |---|---|---|---|---|---|
-| 1. Retrieved chunk contains the answer | 4 of 5 |  |  |  |  |
-| 2. Every answer names a source | 5 of 5 |  |  |  |  |
-| 3. Gate stops out-of-corpus questions | 4 of 5 |  |  |  |  |
-| 4. | | | | | |
-| 5. | | | | | |
+| 1. Retrieved chunk contains the answer | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 2. Every answer names a source | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 3. Gate stops out-of-corpus questions | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 4. Chunks keep related answer facts together | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 5. Answers use facts from the correct campus subject | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
 
-**Did it help?**
+The single returned chunk contains every requested fact for each question.
+All 15 generated answers name their actual source and give supported answers
+about the correct subject. Q1 runs 2 and 3 also mention the week-six drop
+limit, which the source supports. Q4 uses "two blocks" in all three runs;
+under the same judgment used before, that answers the count of two-hour blocks
+specified in the question. All five out-of-scope questions are refused.
+Criterion 4 remains 5/5 because the unchanged chunks retain full source texts.
+As before, criteria 3 and 4 repeat their deterministic measurements across columns.
 
-<!-- Say plainly whether it did, and how you know. If it made things worse,
-     say that — a change that backfired, honestly reported, earns full credit
-     and is more interesting than one that worked. What matters is that you can
-     tell.
+**Criterion 1 — actual retrieved output.** Q1, supplemental retrieval pass 1,
+only result, distance 0.141968. Returned by `store.py::search`, originally
+produced by `chunker.py::fallback_split` via `chunker.py::split_documents`:
 
-     Milestone 4. -->
+```text
+On the add/drop deadline
+
+You can add a course through the end of the second week. Dropping is a longer window — through the end of week six — but a drop after week two shows as a W on your transcript. Nothing anywhere on the registrar's site says this plainly, and students find out from each other.
+```
+
+**Criterion 2 — actual cited answer.** Q2, run 1; produced by
+`generate.py::answer_from_chunks` via `run_eval.py::run_once`, saved by
+`run_eval.py::write_report`:
+
+```text
+Based on housing_aldridge_hall_laundry.txt, one wash costs $1.75 and one dry costs $1.50. The only accepted payment method is card only.
+```
+
+**Criterion 3 — actual gate output.** Produced by
+`run_eval.py::check_out_of_scope` using `gate.py::check`, formatted by
+`run_eval.py::write_report`:
+
+| Out-of-scope question | Best distance | Gate |
+|---|---|---|
+| What is the capital of Mongolia? | 0.825 | refused |
+| How do I change the oil in a diesel engine? | 0.934 | refused |
+| Who won the 1994 World Cup? | 0.886 | refused |
+| What is the recommended dosage of ibuprofen for a headache? | 0.844 | refused |
+| How do I write a for loop in Rust? | 0.896 | refused |
+
+The supplemental check records `gate.py::REFUSAL` for all five:
+
+```text
+I don't have enough information about that.
+```
+
+**Criterion 4 — actual source chunk.** `study_group_rooms.txt#0`, inspected
+independently of retrieval; produced by `chunker.py::fallback_split` through
+`chunker.py::split_documents`:
+
+```text
+Booking a group study room
+
+Rooms book two weeks ahead through the library site, in two-hour blocks, maximum two blocks per person per week. The limit is per person, so a group of four can chain together eight hours if they coordinate.
+
+Rooms 210 and 211 have whiteboards that actually erase. The others don't and no amount of scrubbing helps.
+```
+
+**Criterion 5 — actual grounded answer.** Q5, run 1; produced by
+`generate.py::answer_from_chunks` via `run_eval.py::run_once`, saved by
+`run_eval.py::write_report`:
+
+```text
+In CS 210, there are two midterms and one final exam. The midterms are curved, but the final is not. (Source: course_cs_210_exams.txt)
+```
+
+### Before and after compared
+
+Each cell below lists runs 1 / 2 / 3. Both full run logs are linked above.
+
+| Criterion | Target | Before, top-k 5 | After, top-k 1 | Verdict before → after |
+|---|---|---|---|---|
+| 1. Retrieval | 4 of 5 | 5/5 / 5/5 / 5/5 | 5/5 / 5/5 / 5/5 | MET → MET |
+| 2. Sources | 5 of 5 | 5/5 / 5/5 / 5/5 | 5/5 / 5/5 / 5/5 | MET → MET |
+| 3. Gate | 4 of 5 | 5/5 / 5/5 / 5/5 | 5/5 / 5/5 / 5/5 | MET → MET |
+| 4. Chunk completeness | 4 of 5 | 5/5 / 5/5 / 5/5 | 5/5 / 5/5 / 5/5 | MET → MET |
+| 5. Correct subject and facts | 4 of 5 | 5/5 / 5/5 / 5/5 | 5/5 / 5/5 / 5/5 | MET → MET |
+
+The supplemental evidence also allows a direct comparison of retrieved context.
+These are counts of chunk-text characters, excluding prompt instructions and
+source labels; they are not token or billing measurements.
+
+| Question | Before chunks | After chunks | Before characters | After characters |
+|---|---|---|---|---|
+| Q1: Add/drop | 5 | 1 | 1,439 | 300 |
+| Q2: Aldridge laundry | 5 | 1 | 1,619 | 299 |
+| Q3: Shuttle | 5 | 1 | 1,518 | 379 |
+| Q4: Study rooms | 5 | 1 | 1,908 | 343 |
+| Q5: CS 210 | 5 | 1 | 1,256 | 237 |
+| Total per pass | 25 | 5 | 7,740 | 1,558 |
+
+**Did it help?** Reducing top-k removed the distracting sources and cut
+retrieved text by **79.9%**, while all five criteria stayed at 5/5 in every
+run; it did **not** improve measured answer correctness, which was already 5/5.
+
+The one retained chunk is the same first-ranked chunk as before for every
+question. The reduction also removes some useful corroboration, such as the
+second Aldridge document. I kept top-k 1 for this tested question set, but
+these results do not establish that it is better for questions requiring
+multiple sources or for unseen paraphrases. There was no index rebuild or
+second pipeline change between the before and after evaluations.
 
 ## What's Still Broken
 

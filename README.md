@@ -443,6 +443,29 @@ Source: `course_cs_210_exams.txt` (also found in `course_cs_210.txt`)
 | 4 | Chunk completeness | MET | All five relevant source chunks preserve complete answer-bearing sentences and all requested facts, independently of retrieval. |
 | 5 | Correct subject and facts | MET | Each of the 15 answers covers every requested detail with support in its cited documents, including Q2's alternate citation and Q4's shorter wording discussed above. |
 
+### Milestone 2 — challenge the verdicts
+
+The original targets in `criteria.md` remain unchanged. Criteria 1, 3, 4,
+and 5 require at least 4/5; criterion 2 requires 5/5. The observed counts
+are 5/5 in each column, so every target holds in every run. No criterion
+needed a measurement revision.
+
+For the solo review, AI argued against each MET verdict, then checked those
+objections against the original criteria and saved evidence:
+
+| Criterion | Strongest case for MISSED | Decision after checking |
+|---|---|---|
+| 1. Retrieval | A source filename alone does not prove the retrieved chunk contains the complete answer; the original log omits chunk text. | Keep MET. The separately captured chunks contain every requested fact, and all 15 supplemental retrieval source sets and best distances match the original log. The later capture is explicitly identified as supplemental evidence. |
+| 2. Sources | A filename can be present even when it does not support the answer; Q2 run 3 uses the general hall file. | Keep MET. This criterion checks that an existing document is named, which all 15 answers do. Support is checked separately under criterion 5; the general Aldridge file also contains the quoted prices and payment method. |
+| 3. Gate | Five obviously unrelated questions do not prove the gate can reject harder campus-related questions, and the original gate report does not print the refusal sentence. | Keep MET for the five specified questions. All five were blocked; the supplement records the refusal text, and `run_eval.py::run_once` returns that text before generation when blocked. Harder unseen questions remain untested. |
+| 4. Chunk completeness | Passing on short documents does not demonstrate that the chunker handles long documents well. | Keep MET. The original criterion names these five questions and source files. Each relevant chunk preserves the full cleaned document, including complete answer-bearing sentences. Long-document behavior is outside this measurement. |
+| 5. Correct subject and facts | Q4 runs 1 and 2 omit the words "two-hour," and Q1 omits the week-six closing date for dropping. | Keep MET. Q4 asks how many two-hour blocks can be reserved, so "two blocks" answers that count; both answers also give the booking window. Q1 asks the add deadline and when a drop gets a W, both of which are answered. It does not ask for the final drop deadline. No answer adds unsupported facts about another subject. |
+
+The closest judgment is Q4's shorter wording. Even if that question were
+scored as a failure in runs 1 and 2, criterion 5 would be 4/5, 4/5, 5/5
+and still meet its original target. The reported 5/5 counts use the
+question-specific reasoning above, rather than requiring exact wording.
+
 ## Diagnoses
 
 <!-- For each miss: which stage caused it, and how. The stage alone isn't

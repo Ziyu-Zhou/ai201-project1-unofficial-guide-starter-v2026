@@ -297,6 +297,30 @@ I asked AI how the current chunking logic worked with campus_life and whether it
 
 I asked AI how to measure retrieval distances for Milestone 4. It initially suggested a long Python script, so I asked for simpler commands that ran each question individually and inspected the results, then I give the results back to the AI and ask if these make sense to test if we got what we needed.
 
+**3. Unit 2 — evaluation and verdict review.**
+I asked Codex to help complete the evaluation write-up. It found my already
+committed three-pass before log, read all 15 answers against the source
+documents, and captured supplemental chunk and retrieval evidence because
+the original log only listed source names. It drafted the criterion counts
+and explanations in this README. When I supplied the verdict-review
+instructions, it challenged each MET judgment, including whether "two blocks"
+fully answered the study-room question. The documented decision counts that
+as answering the quantity of two-hour blocks already specified in the question.
+The original targets were retained; no scorer was added and no target was
+lowered. These judgments and the write-up were AI-assisted, rather than an
+independent human grading pass.
+
+**4. Unit 2 — diagnosis and measured change.**
+I asked Codex to work through the diagnosis and improvement milestones. It
+found no failed criterion, but identified other halls and courses in the
+retrieved context. It proposed and implemented the single change from top-k
+5 to 1, then ran 15 uncached model calls and the gate checks. It drafted the
+comparison showing unchanged 5/5 scores with 79.9% less retrieved text.
+The final write-up limits the claim to reduced context while preserving the
+measured results; it does not claim that accuracy improved. Codex also drafted
+the remaining limitations and next-unit criteria proposals below. The raw
+before and after outputs are committed so these judgments can be checked.
+
 <!-- ── Stretch features ─────────────────────────────────────────────────────
      Doing one? Say so here BEFORE you start. A feature this README never
      claims earns nothing.
@@ -683,9 +707,41 @@ second pipeline change between the before and after evaluations.
 
      Milestone 5. -->
 
+**No original criterion remains missed after the change.** All five still
+meet their targets in every run. That leaves no measured criterion failure
+requiring a further fix, but the evaluation has important limits:
+
+| Remaining limitation | What I would do next | Why I stopped here |
+|---|---|---|
+| Top-k 1 depends on the first result being sufficient. Questions needing multiple documents or less direct wording may fail. | Build a separate test set with paraphrases and questions requiring two sources, establish expected facts first, then compare top-k values. | The current five questions all have complete answers in their first result. Changing retrieval again would add a second experiment to this one-change comparison. |
+| The gate was tested only on five clearly unrelated questions, using the same set previously used to choose the cutoff. | Add held-out questions about campus topics whose requested details are absent, then measure refusals alongside acceptance of answerable questions. | Current results establish success on the specified set, not generalization to harder unsupported questions. No such additional test was run. |
+| The chunking check does not exercise long documents or facts near split boundaries. | Test longer source documents with answer-bearing sentences near boundaries before comparing a sentence-aware or paragraph-aware strategy. | The five relevant documents already fit intact. Changing chunking would not address a demonstrated miss here. |
+| Answer grading is manual and AI-assisted; short wording such as "two blocks" requires interpretation. | Define required facts per question before the next evaluation and obtain an independent review of borderline cases. | The assignment allows evaluation without `scorer.py`; introducing a new grader now could change the measurement between before and after. |
+
+These are untested risks and measurement limitations, not failures invented
+to make the experiment look more substantial. I stopped after one completed
+change and a full repeat of the same evaluation. The evidence supports
+less retrieved context with unchanged measured correctness.
+
 ## What I'd Do Differently
 
 <!-- Knowing what you know now — which of your five criteria would you write
      differently, and why?
 
      Milestone 5. -->
+
+In the next unit, I would write **criterion 5** to require **5 of 5 answers
+in every run** to cover a predefined list of required facts and support every
+claim with a cited document about the correct subject. Defining those facts
+before testing would make judgments such as the study-room wording easier
+to reproduce, and a single incorrect price or exam rule would count as a miss.
+
+I would also make **criterion 3's test set harder**: keep a target of at least
+4/5 refusals, but use five held-out, campus-related questions whose requested
+answers are demonstrably absent. The original unrelated questions were useful
+for initial gate tuning but give limited evidence of generalization. These
+are proposals for the next unit; the original criteria and reported results
+are preserved.
+
+Submission repository: [Ziyu-Zhou/ai201-project1-unofficial-guide-starter-v2026](https://github.com/Ziyu-Zhou/ai201-project1-unofficial-guide-starter-v2026).
+This is the existing repository configured as `origin`; no new repository was created.

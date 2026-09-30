@@ -486,6 +486,47 @@ question-specific reasoning above, rather than requiring exact wording.
 
      Milestone 3. -->
 
+**No criteria were missed.** All five met their original targets in all
+three columns. There is therefore no observed failed criterion to assign
+to loading, chunking, embedding, retrieval, or generation, and no pattern
+of failures to explain. The saved results support success on these questions,
+not a claim that every stage works well for every possible question.
+
+**Were the targets too safe?** In hindsight, several were safe for this
+corpus and question set. Each question has a complete answer in one short
+source document, and all five relevant documents fit intact in the existing
+800-character chunks. Criterion 4 therefore does not challenge the chunker's
+handling of sentence boundaries in longer documents. Criterion 1 allows any
+of five retrieved chunks to contain the answer, and the correct source ranks
+first for every question. The out-of-scope questions are also well separated
+from the cutoff: their closest match is about 0.825 against a cutoff of 0.64.
+They do not test unsupported questions that closely resemble campus topics.
+Criterion 2 already requires 100%, but naming a file is a narrower check than
+proving that its contents support the answer.
+
+**A pattern worth investigating next:** Retrieval includes other residence
+halls for the Aldridge laundry question and other courses for the CS 210
+exam question. At the retrieval stage, similarity search with `TOP_K = 5`
+returns those related documents alongside the correct source, and generation
+receives all five chunks. This creates an opportunity to mix subjects, but
+the 15 saved answers do not show that failure. It is an observed source of
+distracting context, not a diagnosed cause of a missed criterion.
+
+**The criterion I would tighten:** For a future evaluation, I would raise
+criterion 5 from at least **4 of 5** to **5 of 5 in every run**, keeping the
+same requirement that every requested detail is answered and every factual
+claim is supported by a cited document about the correct subject. One wrong
+hall's price or one wrong course's exam rule would then fail the criterion.
+The current answers already meet this stricter target, so raising the count
+alone would not establish improvement. A separate future test set should
+also include paraphrases and unsupported questions about campus topics, with
+expected answers or refusals established before running it.
+
+This is a proposed future target, not a revision to a broken measurement.
+The original criteria, questions, and before-run verdicts remain unchanged.
+The solo exercise asking for three causes of a wrong answer does not apply
+here because this evaluation found no wrong answer under the stated checks.
+
 ## The Improvement
 
 **What I changed:**

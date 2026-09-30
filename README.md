@@ -312,27 +312,117 @@ I asked AI how to measure retrieval distances for Milestone 4. It initially sugg
 
 ## Run Log — Before
 
-<!-- Your five criteria, three runs each. `python run_eval.py --label before`
-     runs the questions, puts the OUT_OF_SCOPE ones through the gate, and
-     writes it all into results/ for you. Targets come from criteria.md; the
-     verdict column is your call.
+Raw three-pass evaluation: [saved answers and gate results](results/run_2026-09-29_2207_before.md),
+produced by `run_eval.py::main` on September 29 at 22:07, with caching off.
+This file was already committed in `57e1ebe`. This review uses those 15 saved
+answers; it does not claim a new generation run. There is no `scorer.py`, so
+answers were reviewed manually against `criteria.md` and the cited documents.
 
-     Criterion 3 is measured in one deterministic pass rather than three, so
-     the same number goes in all three run columns. That's correct, not lazy.
-
-     Milestone 1. -->
+[Supplemental retrieval and chunk evidence](results/evidence_2026-09-29_before.md)
+records three later retrieval passes and a separate inspection of source chunks,
+with the same settings and no pipeline changes: `campus_life`, default index,
+top-k 5, cutoff 0.64, chunk size 800, overlap 120. These checks made no model calls.
+The original report stores retrieved source names and best distances but omits
+chunk text; the supplement supplies that evidence. Its best distances and source
+sets match the original report.
 
 | Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
 |---|---|---|---|---|---|
-| 1. Retrieved chunk contains the answer | 4 of 5 |  |  |  |  |
-| 2. Every answer names a source | 5 of 5 |  |  |  |  |
-| 3. Gate stops out-of-corpus questions | 4 of 5 |  |  |  |  |
-| 4. | | | | | |
-| 5. | | | | | |
+| 1. Retrieved chunk contains the answer | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 2. Every answer names a source | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 3. Gate stops out-of-corpus questions | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 4. Chunks keep related answer facts together | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 5. Answers use facts from the correct campus subject | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
 
-<!-- Underneath, paste the REAL output for each criterion from one of your
-     runs — the actual text your system produced, not a description of it.
-     Name the file and function that produced it. -->
+Criterion 1 uses the saved source lists plus the supplemental retrieval checks.
+Criterion 3 repeats the single deterministic gate measurement across columns.
+Criterion 4 also repeats one deterministic inspection of the unchanged chunker;
+it is independent of retrieval ranking. Criteria 2 and 5 assess each of the
+15 generated answers separately. A target must hold in every run to be MET.
+
+Manual question-level review (Q1–Q5 follow `questions.py`):
+
+| Question | Complete facts in retrieved/source chunk (criteria 1 and 4) | Source named, runs 1/2/3 (criterion 2) | Correct, complete, supported answer, runs 1/2/3 (criterion 5) |
+|---|---|---|---|
+| Q1: Add/drop | End of second week to add; W after week two, in `admin_add_drop_deadline.txt#0` | Pass / Pass / Pass | Pass / Pass / Pass |
+| Q2: Aldridge laundry | $1.75 wash, $1.50 dry, card only, in `housing_aldridge_hall_laundry.txt#0` | Pass / Pass / Pass | Pass / Pass / Pass |
+| Q3: Shuttle | Every 20 minutes weekdays, 40 minutes weekends, in `transit_shuttle.txt#0` | Pass / Pass / Pass | Pass / Pass / Pass |
+| Q4: Study rooms | Two weeks ahead, maximum two two-hour blocks per person per week, in `study_group_rooms.txt#0` | Pass / Pass / Pass | Pass / Pass / Pass |
+| Q5: CS 210 | Two midterms, one final; midterms curved, final not, in `course_cs_210_exams.txt#0` | Pass / Pass / Pass | Pass / Pass / Pass |
+
+All five relevant chunks retain the full cleaned source document, so no
+answer-bearing sentence is cut at a boundary. Each ranks first in all three
+supplemental retrieval passes. Q2 run 3 cites `housing_aldridge_hall.txt` rather
+than the laundry-specific file; that existing document also supports all three
+facts. Q4 runs 1 and 2 say "two blocks" without repeating "two-hour"; they answer
+the requested count of two-hour blocks and give the booking window, so they pass.
+
+### Criterion 1 — actual retrieved chunk
+
+Supplemental retrieval pass 1, Q1, rank 1; `admin_add_drop_deadline.txt#0`,
+distance 0.141968. Returned by `store.py::search`; produced by
+`chunker.py::fallback_split` via `chunker.py::split_documents`.
+
+```text
+On the add/drop deadline
+
+You can add a course through the end of the second week. Dropping is a longer window — through the end of week six — but a drop after week two shows as a W on your transcript. Nothing anywhere on the registrar's site says this plainly, and students find out from each other.
+```
+
+### Criterion 2 — actual answer naming a source
+
+Q2, run 1. Produced by `generate.py::answer_from_chunks`, called by
+`run_eval.py::run_once` and saved by `run_eval.py::write_report`.
+
+```text
+In Aldridge Hall, one wash costs $1.75 and one dry costs $1.50, and it is card only (source: housing_aldridge_hall_laundry.txt and housing_aldridge_hall.txt).
+```
+
+### Criterion 3 — actual gate results
+
+Copied from `run_eval.py::check_out_of_scope`, formatted by
+`run_eval.py::write_report`; decisions come from `gate.py::check`.
+
+| Out-of-scope question | Best distance | Gate |
+|---|---|---|
+| What is the capital of Mongolia? | 0.825 | refused |
+| How do I change the oil in a diesel engine? | 0.934 | refused |
+| Who won the 1994 World Cup? | 0.886 | refused |
+| What is the recommended dosage of ibuprofen for a headache? | 0.844 | refused |
+| How do I write a for loop in Rust? | 0.896 | refused |
+
+The supplemental check also captured the refusal text from `gate.py::REFUSAL`
+for each blocked question:
+
+```text
+I don't have enough information about that.
+```
+
+### Criterion 4 — actual source chunk
+
+Separate chunk inspection, `study_group_rooms.txt#0`. Produced by
+`chunker.py::fallback_split`, called through `chunker.py::split_documents`.
+The booking window, block length, and weekly limit remain in one complete sentence.
+
+```text
+Booking a group study room
+
+Rooms book two weeks ahead through the library site, in two-hour blocks, maximum two blocks per person per week. The limit is per person, so a group of four can chain together eight hours if they coordinate.
+
+Rooms 210 and 211 have whiteboards that actually erase. The others don't and no amount of scrubbing helps.
+```
+
+### Criterion 5 — actual answer about the correct subject
+
+Q5, run 1. Produced by `generate.py::answer_from_chunks`, called by
+`run_eval.py::run_once` and saved by `run_eval.py::write_report`.
+Both cited CS 210 documents support the exam counts and curve rules.
+
+```text
+In CS 210, there are two midterms and a final exam. The midterms are curved, but the final is not.
+
+Source: `course_cs_210_exams.txt` (also found in `course_cs_210.txt`)
+```
 
 ## Verdicts
 
@@ -347,11 +437,11 @@ I asked AI how to measure retrieval distances for Milestone 4. It initially sugg
 
 | # | Criterion | Verdict | How I decided |
 |---|---|---|---|
-| 1 |  |  |  |
-| 2 |  |  |  |
-| 3 |  |  |  |
-| 4 |  |  |  |
-| 5 |  |  |  |
+| 1 | Retrieval | MET | All five questions have a top-five chunk containing every required fact; the supplemental checks place each relevant source first. |
+| 2 | Sources | MET | All 15 non-refusal answers name at least one existing corpus document. |
+| 3 | Gate | MET | All five out-of-scope questions were refused at cutoff 0.64; the lowest best distance was 0.825. |
+| 4 | Chunk completeness | MET | All five relevant source chunks preserve complete answer-bearing sentences and all requested facts, independently of retrieval. |
+| 5 | Correct subject and facts | MET | Each of the 15 answers covers every requested detail with support in its cited documents, including Q2's alternate citation and Q4's shorter wording discussed above. |
 
 ## Diagnoses
 
